@@ -1,0 +1,16 @@
+{
+  "ExtendedData": {
+    "inputs": [
+      "http://aplaco2.aconcaguafoods.cl:8000/sap/bc/srt/wsdl/bndg_EFC16972CF9F9EF1A2D8005056011375/wsdl11/allinone/standard/document?sap-client=500"
+    ],
+    "collectionTypes": [
+      "System.Array",
+      "System.Collections.Generic.Dictionary`2"
+    ],
+    "namespaceMappings": [
+      "*, ServiceNotificacion"
+    ],
+    "targetFramework": "net8.0",
+    "typeReuseMode": "All"
+  }
+}
