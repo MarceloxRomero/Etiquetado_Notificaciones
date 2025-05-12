@@ -226,6 +226,7 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
 
                 var uma = notificacion.Uma.PadLeft(20,'0');
 
+
                 var request = new ZmmWbsMovimientos
                 {
                     WUma = uma,
