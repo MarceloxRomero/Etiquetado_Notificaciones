@@ -18,8 +18,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Etiquetado_Notificaciones.Connected_Services.SAP
 {
-    public class ProcesosSAP
+    public class ProcesosSAP : IDisposable
     {
+        private bool disposed = false;
+
         private readonly ILogger<ProcesosSAP> _logger;
         private readonly AsyncRetryPolicy _retryPolicy;
         private readonly DatosSql data;
@@ -403,6 +405,20 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
             {
                 _logger.LogError(ex, "Fallo en ServicioActualizaFechaCodificado para UMA {Uma}", notificacion.Uma);
                 return false;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (!disposed)
+            {
+                _NotificacionesClient?.Close();
+                _fechaCodificadoClient?.Close();
+                _LoteInspeccionFQClient?.Close();
+                _LoteInspeccionMBClient?.Close();
+                _MoverUmasClient?.Close();
+                _MovimientoUbicacionClient?.Close();
+                disposed = true;
             }
         }
     }
