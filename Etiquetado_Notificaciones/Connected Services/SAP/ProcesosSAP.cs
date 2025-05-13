@@ -43,10 +43,10 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
         private string wSquit;
         private string GeneraQM;
 
-        public ProcesosSAP(ILogger<ProcesosSAP> logger = null)
+        public ProcesosSAP(ILoggerFactory loggerFactory = null,ILogger < ProcesosSAP> logger = null)
         {
             _logger = logger ?? new NullLogger<ProcesosSAP>();
-            data = new DatosSql();
+            data = new DatosSql(loggerFactory);
 
             _NotificacionesClient = new zpp_notificacionesClient();
             _fechaCodificadoClient = new ZWS_ETIQUETADO0006Client();
@@ -365,7 +365,7 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
                     return false;
                 }
 
-                await data.ActualizarLoteInespccionFQ(notificacion, loteFQ);
+                await data.ActualizarLoteInspeccionFQ(notificacion, loteFQ);
                 _logger.LogInformation("Actualizando registro FQ de {Uma} con lote FQ {LoteFQ}", notificacion.Uma, loteFQ);
                 return true;
             }

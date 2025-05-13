@@ -1,31 +1,72 @@
 ﻿using Etiquetado_Notificaciones.Controller;
-using Etiquetado_Notificaciones.Logs;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using System;
 using System.Configuration;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Etiquetado_Notificaciones
 {
-
     public class Program
     {
-        public static ErrorLogger errorLogger = new ErrorLogger();
+        private static readonly ILogger<Program> _logger;
+        private static readonly ILoggerFactory _loggerFactory;
         private static Timer? _timer;
 
+        // Constructor estático para inicializar _logger
+        static Program()
+        {
+            Log.Logger = new LoggerConfiguration()
+                    .MinimumLevel.Information()
+                    .WriteTo.Console()
+                    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
+                    .CreateLogger();
+
+            _loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());
+            _logger = _loggerFactory.CreateLogger<Program>();
+        }
 
         static async Task Main(string[] args)
         {
+            using var cts = new CancellationTokenSource();
+            Console.CancelKeyPress += (s, e) =>
+            {
+                _logger.LogInformation("Recibida señal de cancelación (Ctrl+C)");
+                cts.Cancel();
+                e.Cancel = true;
+            };
+            await RunAsync(cts.Token);
+        }
+
+        private static async Task RunAsync(CancellationToken cancellationToken)
+        {
             try
             {
-                //Iniciamos los minutos del timer
-                int minutos = ConfigurationManager.AppSettings["Minutos"] != null ? Convert.ToInt32(ConfigurationManager.AppSettings["Minutos"]) : 1;
+                int minutos;
+                if (!int.TryParse(ConfigurationManager.AppSettings["Minutos"], out minutos) || minutos <= 0)
+                {
+                    _logger.LogWarning("Clave 'Minutos' no válida en App.config. Usando valor predeterminado: 1 minuto");
+                    minutos = 1;
+                }
 
-                //Iniciamos el timer
+                _logger.LogInformation("Iniciando timer con intervalo de {Minutos} minutos", minutos);
                 _timer = new Timer(async (_) => await obtienePendientes(), null, TimeSpan.Zero, TimeSpan.FromMinutes(minutos));
 
-                await Task.Delay(Timeout.Infinite);
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Aplicación cancelada");
             }
             catch (Exception ex)
             {
-                errorLogger.LogError(ex.Message);
+                _logger.LogError(ex, "Error en la inicialización del programa");
+            }
+            finally
+            {
+                _timer?.Dispose();
+                _logger.LogInformation("Timer detenido");
             }
         }
 
@@ -33,15 +74,13 @@ namespace Etiquetado_Notificaciones
         {
             try
             {
-                DatosSql dataSql = new DatosSql();
-                Console.WriteLine($"Rescatando producción pendiente del " + DateTime.Now);
-                //Obtenemos la producción pendiente
-                await dataSql.ObtenerProduccionPendiente();
-
+                _logger.LogInformation("Rescatando producción pendiente a las {Fecha}", DateTime.Now);
+                DatosSql dataSql = new DatosSql(_loggerFactory);
+                await dataSql.ObtenerProduccionPendiente(_logger);
             }
             catch (Exception ex)
             {
-
+                _logger.LogError(ex, "Error al obtener producción pendiente");
                 throw;
             }
         }
