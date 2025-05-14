@@ -15,6 +15,9 @@ using System.ServiceModel;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Net;
+using System.Net.Http;
+
 
 namespace Etiquetado_Notificaciones.Connected_Services.SAP
 {
@@ -43,10 +46,10 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
         private string wSquit;
         private string GeneraQM;
 
-        public ProcesosSAP(ILoggerFactory loggerFactory = null,ILogger < ProcesosSAP> logger = null)
+        public ProcesosSAP(DatosSql datosSql, ILogger<ProcesosSAP> logger = null)
         {
             _logger = logger ?? new NullLogger<ProcesosSAP>();
-            data = new DatosSql(loggerFactory);
+            data = datosSql ?? throw new ArgumentNullException(nameof(datosSql));
 
             _NotificacionesClient = new zpp_notificacionesClient();
             _fechaCodificadoClient = new ZWS_ETIQUETADO0006Client();
@@ -81,13 +84,17 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
             _retryPolicy = Policy
                 .Handle<CommunicationException>()
                 .Or<TimeoutException>()
+                .Or<HttpRequestException>()
+                .Or<FaultException>()
+                .Or<EndpointNotFoundException>()
+                .Or<WebException>()
                 .Or<InvalidOperationException>(ex => ex.Message.Contains("respuesta nula"))
                 .WaitAndRetryAsync(
                     retryCount: 3,
                     sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
                     onRetry: (exception, timeSpan, attempt, context) =>
                     {
-                        _logger.LogWarning($"Intento {attempt} fallido: {exception.Message}. Reintentando en {timeSpan.TotalSeconds}s.");
+                        _logger.LogWarning($"Intento {attempt} fallido: {exception.Message} ({exception.GetType().Name}). Reintentando en {timeSpan.TotalSeconds}s.");
                     });
         }
 

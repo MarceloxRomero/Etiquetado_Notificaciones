@@ -76,7 +76,7 @@ namespace Etiquetado_Notificaciones
             {
                 _logger.LogInformation("Rescatando producción pendiente a las {Fecha}", DateTime.Now);
                 DatosSql dataSql = new DatosSql(_loggerFactory);
-                await dataSql.ObtenerProduccionPendiente(_logger);
+                await dataSql.ObtenerProduccionPendiente(_loggerFactory.CreateLogger<DatosSql>());
             }
             catch (Exception ex)
             {

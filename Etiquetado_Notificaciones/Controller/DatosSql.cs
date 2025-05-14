@@ -7,7 +7,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Logging;
 
 namespace Etiquetado_Notificaciones.Controller
 {
@@ -38,7 +37,7 @@ namespace Etiquetado_Notificaciones.Controller
             }
             TiempoEntreCiclo = tiempo;
 
-            procesosSAP = new ProcesosSAP(loggerFactory);
+            procesosSAP = new ProcesosSAP(this);
         }
 
         public async Task ObtenerProduccionPendiente(ILogger logger)
