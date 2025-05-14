@@ -23,6 +23,8 @@
     <PackageReference Include="System.ServiceModel.Http" Version="8.1.1" />
     <PackageReference Include="System.ServiceModel.NetTcp" Version="8.1.1" />
     <PackageReference Include="System.ServiceModel.Security" Version="6.0.0" />
+	<Reference Include="System.ServiceModel" />
+    <Reference Include="System.Net.Http" />
   </ItemGroup>
 
 </Project>

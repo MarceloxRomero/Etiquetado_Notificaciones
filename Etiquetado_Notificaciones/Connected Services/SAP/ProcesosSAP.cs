@@ -45,6 +45,7 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
         private string wNlpla;
         private string wSquit;
         private string GeneraQM;
+        private int Reintentos;
 
         public ProcesosSAP(DatosSql datosSql, ILogger<ProcesosSAP> logger = null)
         {
@@ -73,6 +74,7 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
             wNlpla = appSettings["Ubicacion"];
             wSquit = appSettings["Confirmacion"];
             GeneraQM = appSettings["GeneraFQ"];
+            Reintentos = Convert.ToInt32(appSettings["ReIntentos"]);
 
             ConfigureClientCredentials<zpp_notificacionesClient, zpp_notificaciones>(_NotificacionesClient, UsuarioSap, PasswordSap);
             ConfigureClientCredentials<ZWS_ETIQUETADO0006Client, ZWS_ETIQUETADO0006>(_fechaCodificadoClient, UsuarioSap, PasswordSap);
@@ -88,10 +90,13 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
                 .Or<FaultException>()
                 .Or<EndpointNotFoundException>()
                 .Or<WebException>()
+                .Or<ProtocolException>()
+                .Or<ServerTooBusyException>()
+                .Or<TaskCanceledException>()
                 .Or<InvalidOperationException>(ex => ex.Message.Contains("respuesta nula"))
                 .WaitAndRetryAsync(
-                    retryCount: 3,
-                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                    retryCount: Reintentos,
+                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt) * 5),
                     onRetry: (exception, timeSpan, attempt, context) =>
                     {
                         _logger.LogWarning($"Intento {attempt} fallido: {exception.Message} ({exception.GetType().Name}). Reintentando en {timeSpan.TotalSeconds}s.");
@@ -112,7 +117,13 @@ namespace Etiquetado_Notificaciones.Connected_Services.SAP
             {
                 return await _retryPolicy.ExecuteAsync(async () =>
                 {
+                    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                     var result = await action();
+                    stopwatch.Stop();
+                    if (stopwatch.ElapsedMilliseconds > 30000) // 30 segundos
+            {
+                _logger.LogWarning($"Respuesta lenta en {operationName} para UMA {uma ?? "desconocida"}: {stopwatch.ElapsedMilliseconds}ms");
+            }
                     if (result == null)
                     {
                         throw new InvalidOperationException("El servicio devolvió una respuesta nula.");
